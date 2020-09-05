@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>微博留言项目</title>
+<style>
+/*解决双花括号闪烁问题*/
+[v-cloak] {
+	display: none;
+}
+</style>
+<link href="../css/weibo.css" rel="stylesheet" type="text/css" />
+<script type="text/javascript" src="../js/vue.js"></script>
+<script type="text/javascript" src="../js/axios.min.js"></script>
+<script>
+        // 自定义vue过滤器
+        Vue.filter('date', function (input) {
+            console.log("启动过滤器");
+            console.log("time："+input)
+            var oDate = new Date(input);
+            return oDate.getFullYear() + '-' + (oDate.getMonth() + 1) + '-' + oDate.getDate() + ' ' + oDate.getHours() + ':' + oDate.getMinutes() + ':' + oDate.getSeconds();
+        });
+        // 页面加载事件
+        window.onload = function () {
+            // 实例化vue对象
+            new Vue({
+                // 绑定元素
+                el: '.msgArea',
+                //vue的属性、数据
+                data: {
+                    t1: '',
+                    msgData: []
+                },
+                methods: {
+                    // 添加方法
+                    add: function () {
+                        var _this = this;
+                        var params = new URLSearchParams();
+                        params.append('blogContent', this.t1);
+                        //发送请求
+                        axios.post('/add.do', params)
+                        .then(function (res) {
+                        	console.log("返回结果："+res.data);
+                            var json = res.data.result;
+                            console.log("json封装："+json)
+                            console.log("json新增结果："+res.data.success);
+                            //msgData添加数据
+                            _this.msgData.unshift({
+                                content: _this.t1,
+                                time: json.blogCreateDate,
+                                acc: 0,
+                                ref: 1,
+                                id: json.blogId
+                            });
+                            this.t1 = '';
+                        }).catch(function (error) {
+                            console.log(error);
+                        });
+                    },
+                    // 获取分页数据方法
+                    getPageData: function (n) {
+                        var _this = this;
+                        var param = new URLSearchParams();
+                        param.append('pageNo', n);
+                        param.append('pageSize', 10);
+                        //发送请求
+                        axios.post('/query.do', param)
+                        .then(function (res) {
+                        console.log("返回结果："+res.data);
+                            var arr = res.data.list.data
+                            console.log("json分页结果："+arr);
+                            // 循环添加数据
+                            for (var i = 0; i < arr.length; i++) {
+                                _this.msgData.push({
+                                    content: arr[i].blogContent,
+                                    time: arr[i].blogCreateDate,
+                                    acc: Math.round(Math.random()*20),
+                                    ref: Math.round(Math.random()*20),
+                                    id: arr[i].blogId
+                                });
+                            }
+                            this.t1 = '';
+                        }).catch(function (error) {
+                            console.log(error);
+                        });
+                    }
+                },
+                // vue生命周期
+                created: function () {
+                    this.getPageData(1);
+                }
+            });
+        };
+    </script>
+</head>
+<body>
+	<div class="msgArea">
+		<!--留言-->
+		<div class="takeComment">
+			<textarea name="textarea" class="takeTextField" id="tijiaoText"
+				v-model="t1"></textarea>
+			<div class="takeSbmComment">
+				<input type="button" class="inputs" value="" @click="add" /> <span>(可按
+					Enter 回复)</span>
+			</div>
+		</div>
+		<!--已留-->
+		<div class="commentOn">
+			<div class="noContent" v-show="msgData.length==0">暂无留言</div>
+			<div class="messList">
+				<div class="reply" v-for="item in msgData">
+					<p class="replyContent" v-cloak>{{item.content}}</p>
+					<p class="operation">
+						<span class="replyTime" v-cloak>{{item.time | date}}</span> <span
+							class="handle"> <a href="javascript:;" class="top" v-cloak>{{item.acc}}</a>
+							<a href="javascript:;" class="down_icon" v-cloak>{{item.ref}}</a>
+							<a href="javascript:;" class="cut" v-cloak>删除</a> </span>
+					</p>
+				</div>
+			</div>
+			<div class="page">
+				<a href="javascript:;" class="active">1</a> <a href="javascript:;">2</a>
+				<a href="javascript:;">3</a>
+			</div>
+		</div>
+	</div>
+</body>
+</html>
